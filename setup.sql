@@ -1,13 +1,138 @@
-DROP DATABASE IF EXISTS assignment2076563;
-CREATE DATABASE assignment2076563;
-\c assignment2076563;
-
+DROP TYPE IF EXISTS personnel_type CASCADE;
 CREATE TYPE personnel_type AS ENUM ('OWNER', 'STAFF');
+
+DROP TABLE IF EXISTS booking CASCADE;
+DROP TABLE IF EXISTS dog CASCADE;
+DROP TABLE IF EXISTS treatments CASCADE;
+DROP TABLE IF EXISTS treatment CASCADE;
+DROP TABLE IF EXISTS kennel CASCADE;
+DROP TABLE IF EXISTS phone CASCADE;
+DROP TABLE IF EXISTS treatment_type CASCADE;
+DROP TABLE IF EXISTS owner CASCADE;
+DROP TABLE IF EXISTS shift CASCADE;
+DROP TABLE IF EXISTS staff CASCADE;
+DROP TABLE IF EXISTS staff_roles CASCADE;
+DROP TABLE IF EXISTS addresses CASCADE;
+DROP TABLE IF EXISTS food_requirement CASCADE;
+DROP TABLE IF EXISTS address CASCADE;
+DROP TABLE IF EXISTS dog_owners CASCADE;
+DROP TABLE IF EXISTS food_requirements CASCADE;
+DROP TABLE IF EXISTS phone_numbers CASCADE;
+
+CREATE TABLE address
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    first_line VARCHAR(100) NOT NULL,
+    second_line VARCHAR(100) NULL,
+    postcode VARCHAR(32) NOT NULL,
+    county VARCHAR(255) NULL,
+    country VARCHAR(50) NOT NULL
+);
+
+
+CREATE TABLE food_requirement
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    food_name VARCHAR(50) NOT NULL,
+    mins_since_start INT NOT NULL,
+    instructions VARCHAR(255) NOT NULL,
+    size INT NOT NULL
+);
+
+
+-- Polymorphic foreign key association, so we need to use triggers
+-- to enforce the relationships.
+CREATE TABLE addresses
+(
+    personnel_id INT NOT NULL,
+    address_id INT NOT NULL,
+    type personnel_type NOT NULL,
+    FOREIGN KEY(address_id)
+        REFERENCES address(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
+);
+
+
+CREATE TABLE staff_roles
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    role_name VARCHAR(32) NOT NULL UNIQUE
+);
+
+
+CREATE TABLE staff
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    first_name VARCHAR(128) NOT NULL,
+    last_name VARCHAR(128) NOT NULL,
+    dob DATE NOT NULL,
+    salary INT NOT NULL
+);
+
+
+CREATE TABLE shift
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    staff_id INT NOT NULL,
+    start_time TIMESTAMPTZ NOT NULl,
+    end_time TIMESTAMPTZ NOT NULl,
+    complete BIT NOT NULL
+);
+
+
+CREATE TABLE owner
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    first_name VARCHAR(128) NOT NULL,
+    last_name VARCHAR(128) NOT NULL,
+    dob DATE NOT NULL
+);
 
 CREATE TABLE treatment_type(
     id SERIAL PRIMARY KEY NOT NULL,
      name VARCHAR(255) NOT NULL UNIQUE
 );
+
+
+-- Because of the polymorphism we have in the phone_numbers table, we need to
+-- define a custom trigger to check that table doesn't already have a
+-- an owner with a priority.
+
+CREATE TABLE phone
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    country_code VARCHAR(5) NOT NULL,
+    number VARCHAR(15) NOT NULL,
+    instructions VARCHAR(320) NULL,
+    priority SMALLINT NOT NULl,
+    name VARCHAR(64) NOT NULL,
+    CONSTRAINT priority_above_0 CHECK(priority > 0)
+);
+
+
+CREATE TABLE kennel(
+    id SERIAL PRIMARY KEY NOT NULL,
+    floor_id INT NOT NULL,
+    building_id INT NOT NULL,
+    room_id INT NOT NULL UNIQUE,
+    capacity INT NOT NULL,
+    requirements VARCHAR(255)
+);
+
+
+CREATE TABLE dog(
+    id SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    dob DATE NOT NULL,
+    kennel_id INT NULL,
+    flea_treatment DATE NOT NULL,
+    FOREIGN KEY(kennel_id)
+        REFERENCES kennel(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
+);
+
 
 CREATE TABLE treatment(
     id SERIAL PRIMARY KEY NOT NULL,
@@ -25,6 +150,7 @@ CREATE TABLE treatment(
             ON UPDATE CASCADE
 );
 
+
 CREATE TABLE treatments(
     treatment_id INT NOT NULL,
     dog_id INT NOT NULL,
@@ -38,27 +164,6 @@ CREATE TABLE treatments(
             ON UPDATE CASCADE
 );
 
-CREATE TABLE kennel(
-    id SERIAL PRIMARY KEY NOT NULL,
-    floor_id INT NOT NULL,
-    building_id INT NOT NULL,
-    room_id INT NOT NULL UNIQUE,
-    capacity INT NOT NULL,
-    requirements VARCHAR(255)
-);
-
-CREATE TABLE dog(
-    id SERIAL PRIMARY KEY NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    dob DATE NOT NULL,
-    kennel_id INT NULL,
-    flea_treatment DATE NOT NULL,
-    FOREIGN KEY(kennel_id)
-        REFERENCES kennel(id)
-            ON DELETE CASCADE
-            ON UPDATE CASCADE
-);
-
 CREATE TABLE booking(
     id SERIAL PRIMARY KEY NOT NULL,
     dog_id INT NOT NULL,
@@ -68,57 +173,6 @@ CREATE TABLE booking(
         REFERENCES dog(id)
             ON DELETE CASCADE
             ON UPDATE CASCADE
-);
-
-CREATE TABLE address
-(
-    id SERIAL PRIMARY KEY NOT NULL,
-    first_line VARCHAR(100) NOT NULL,
-    second_line VARCHAR(100) NULL,
-    postcode VARCHAR(32) NOT NULL,
-    county VARCHAR(255) NULL,
-    country VARCHAR(50) NOT NULL
-);
-
--- Polymorphic foreign key association, so we need to use triggers
--- to enforce the relationships.
-CREATE TABLE addresses
-(
-    personnel_id INT NOT NULL,
-    address_id INT NOT NULL,
-    personnel_type personnel_type NOT NULL
-);
-
-CREATE TABLE staff_roles
-(
-    id SERIAL PRIMARY KEY NOT NULL,
-    role_name VARCHAR(32) NOT NULL UNIQUE
-);
-
-CREATE TABLE staff
-(
-    id SERIAL PRIMARY KEY NOT NULL,
-    first_name VARCHAR(128) NOT NULL,
-    last_name VARCHAR(128) NOT NULL,
-    dob DATE NOT NULL,
-    salary INT NOT NULL
-);
-
-CREATE TABLE shift
-(
-    id SERIAL PRIMARY KEY NOT NULL,
-    staff_id INT NOT NULL,
-    start TIMESTAMPTZ NOT NULl,
-    end TIMESTAMPTZ NOT NULl,
-    complete BIT NOT NULL
-);
-
-CREATE TABLE owner
-(
-    id SERIAL PRIMARY KEY NOT NULL,
-    first_name VARCHAR(128) NOT NULL,
-    last_name VARCHAR(128) NOT NULL,
-    dob DATE NOT NULL
 );
 
 CREATE TABLE dog_owners
@@ -135,14 +189,6 @@ CREATE TABLE dog_owners
             ON UPDATE CASCADE
 );
 
-CREATE TABLE food_requirement
-(
-    id SERIAL PRIMARY KEY NOT NULL,
-    food_name VARCHAR(50) NOT NULL,
-    mins_since_start INT NOT NULL,
-    instructions VARCHAR(255) NOT NULL,
-    size INT NOT NULL
-);
 
 CREATE TABLE food_requirements
 (
@@ -158,19 +204,6 @@ CREATE TABLE food_requirements
             ON UPDATE CASCADE
 );
 
--- Because of the polymorphism we have in the phone_numbers table, we need to
--- define a custom trigger to check that table doesn't already have a
--- an owner with a priority.
-CREATE TABLE phone
-(
-    id SERIAL PRIMARY KEY NOT NULL,
-    country_code VARCHAR(5) NOT NULL,
-    number VARCHAR(15) NOT NULL,
-    instructions VARCHAR(320) NULL,
-    priority SMALLINT NOT NULl,
-    name VARCHAR(64) NOT NULL,
-    CONSTRAINT priority_above_0 CHECK(priority > 0)
-);
 
 CREATE TABLE phone_numbers
 (
@@ -186,7 +219,7 @@ CREATE TABLE phone_numbers
 
 -- TODO: Handle cascade deletion on polymorphic relationships.
 -- Handle the Polymorphic relations
-DROP FUNCTION IF EXISTS enforce_poly_fk_addresses;
+DROP FUNCTION IF EXISTS enforce_poly_fk_addresses CASCADE ;
 
 CREATE FUNCTION enforce_poly_fk_addresses()
     RETURNS TRIGGER
@@ -200,21 +233,24 @@ BEGIN
        Which I wasn't willing to introduce, I'm aware there's a method to prepare dynamic sql queries within
        psql, however I believe that costs readability.
     */
-    CASE NEW.personnel_type
+    CASE NEW.type
         WHEN 'OWNER'::personnel_type THEN
-            IF( EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) ) THEN
+
+             RAISE NOTICE ' DOES EXIST: %s %s', EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id), (SELECT COUNT(id) FROM owner WHERE id = NEW.personnel_id);
+
+            IF( NOT EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No owner.id found for personnel id.';
             END IF;
 
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND personnel_type = NEW.personnel_type)) THEN
+            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
                 RAISE EXCEPTION 'Duplicate address for owner.id found.';
             END IF;
         WHEN 'STAFF'::personnel_type THEN
-            IF( EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
+            IF( NOT EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No staff.id found';
             END IF;
 
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND personnel_type = NEW.personnel_type)) THEN
+            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
                 RAISE EXCEPTION 'Duplicate address for owner.id found.';
             END IF;
     END CASE;
@@ -227,7 +263,7 @@ $enforce_poly$
 LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS enforce_poly_fk_phone_numbers;
+DROP FUNCTION IF EXISTS enforce_poly_fk_phone_numbers CASCADE ;
 
 CREATE FUNCTION enforce_poly_fk_phone_numbers()
     RETURNS TRIGGER
@@ -236,13 +272,15 @@ $enforce_poly$
 
 BEGIN
 
-    CASE NEW.personnel_type
+    CASE NEW.type
         WHEN 'OWNER'::personnel_type THEN
-            IF( EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) ) THEN
+            RAISE NOTICE ' DOES EXIST: %s %s', EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id), (SELECT COUNT(id) FROM owner WHERE id = NEW.personnel_id);
+
+            IF( NOT EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No owner.id found for personnel id.';
             END IF;
 
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND personnel_type = NEW.personnel_type)) THEN
+            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
                 RAISE EXCEPTION 'Duplicate address for owner.id found.';
             END IF;
         WHEN 'STAFF'::personnel_type THEN
@@ -250,7 +288,7 @@ BEGIN
                 RAISE EXCEPTION 'No staff.id found';
             END IF;
 
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND personnel_type = NEW.personnel_type)) THEN
+            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
                 RAISE EXCEPTION 'Duplicate address for owner.id found.';
             END IF;
     END CASE;
@@ -261,11 +299,48 @@ END
 
 $enforce_poly$
 LANGUAGE plpgsql;
-/*
+
+DROP FUNCTION IF EXISTS enforce_priority_phone_numbers;
+
+CREATE FUNCTION enforce_priority_phone_numbers()
+    RETURNS TRIGGER
+AS
+$enforce_poly$
+
+BEGIN
+
+    CASE NEW.type
+        WHEN 'OWNER'::personnel_type THEN
+            SELECT EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) AS value;
+
+            IF( NOT EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) ) THEN
+                RAISE EXCEPTION 'No owner.id found for personnel id.';
+            END IF;
+
+            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
+                RAISE EXCEPTION 'Duplicate address for owner.id found.';
+            END IF;
+        WHEN 'STAFF'::personnel_type THEN
+            IF( NOT EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
+                RAISE EXCEPTION 'No staff.id found';
+            END IF;
+
+            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
+                RAISE EXCEPTION 'Duplicate address for staff.id found.';
+            END IF;
+    END CASE;
+
+    RETURN NEW;
+
+END
+
+$enforce_poly$
+LANGUAGE plpgsql;
+
 CREATE TRIGGER enforce_poly_fk_phone_numbers_trigger
     BEFORE insert
     ON phone_numbers
-    FOR EACH ROW EXECUTE PROCEDURE enforce_poly_fk_phone_numbers();*/
+    FOR EACH ROW EXECUTE PROCEDURE enforce_poly_fk_phone_numbers();
 
 CREATE TRIGGER enforce_poly_fk_addresses_trigger
     BEFORE insert
@@ -275,8 +350,8 @@ CREATE TRIGGER enforce_poly_fk_addresses_trigger
 BEGIN;
 SET datestyle = dmy;
 
-/*INSERT INTO owner(first_name, last_name, dob) VALUES('Test', 'Test2', DATE '15-03-2003');
-INSERT INTO addresses(personnel_id, address_id, personnel_type) VALUES(1,1,'OWNER');
-INSERT INTO addresses(personnel_id, address_id, personnel_type) VALUES(2,1,'OWNER');*/
+INSERT INTO owner(first_name, last_name, dob) VALUES('Test', 'Test2', DATE '15-03-2003');
+INSERT INTO addresses(personnel_id, address_id, type) VALUES(6,50,'OWNER');
+-- INSERT INTO addresses(personnel_id, address_id, type) VALUES(2,1,'OWNER');
 
 COMMIT;
