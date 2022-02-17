@@ -4,12 +4,12 @@ CREATE DATABASE assignment2076563;
 
 CREATE TYPE personnel_type AS ENUM ('OWNER', 'STAFF');
 
-CREATE TABLE vaccination_type(
+CREATE TABLE treatment_type(
     id SERIAL PRIMARY KEY NOT NULL,
      name VARCHAR(255) NOT NULL UNIQUE
 );
 
-CREATE TABLE vaccination(
+CREATE TABLE treatment(
     id SERIAL PRIMARY KEY NOT NULL,
     date DATE NOT NULL,
     type INT NOT NULL,
@@ -20,7 +20,20 @@ CREATE TABLE vaccination(
             ON DELETE CASCADE
             ON UPDATE CASCADE,
     FOREIGN KEY (type)
-        REFERENCES vaccination_type(id)
+        REFERENCES treatment_type(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
+);
+
+CREATE TABLE treatments(
+    treatment_id INT NOT NULL,
+    dog_id INT NOT NULL,
+        FOREIGN KEY (dog_id)
+        REFERENCES dog(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE,
+    FOREIGN KEY (treatment_id)
+        REFERENCES treatment(id)
             ON DELETE CASCADE
             ON UPDATE CASCADE
 );
@@ -91,6 +104,15 @@ CREATE TABLE staff
     salary INT NOT NULL
 );
 
+CREATE TABLE shift
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    staff_id INT NOT NULL,
+    start TIMESTAMPTZ NOT NULl,
+    end TIMESTAMPTZ NOT NULl,
+    complete BIT NOT NULL
+);
+
 CREATE TABLE owner
 (
     id SERIAL PRIMARY KEY NOT NULL,
@@ -113,16 +135,50 @@ CREATE TABLE dog_owners
             ON UPDATE CASCADE
 );
 
-CREATE TABLE dog_owners
+CREATE TABLE food_requirement
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    food_name VARCHAR(50) NOT NULL,
+    mins_since_start INT NOT NULL,
+    instructions VARCHAR(255) NOT NULL,
+    size INT NOT NULL
+);
+
+CREATE TABLE food_requirements
 (
     dog_id INT NOT NULL,
-    owner_id INT NOT NULL,
+    food_requirement_id INT NOT NULL UNIQUE,
     FOREIGN KEY(dog_id)
         REFERENCES dog(id)
             ON DELETE CASCADE
             ON UPDATE CASCADE,
-    FOREIGN KEY(owner_id)
-        REFERENCES owner(id)
+    FOREIGN KEY (food_requirement_id)
+        REFERENCES food_requirement(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
+);
+
+-- Because of the polymorphism we have in the phone_numbers table, we need to
+-- define a custom trigger to check that table doesn't already have a
+-- an owner with a priority.
+CREATE TABLE phone
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    country_code VARCHAR(5) NOT NULL,
+    number VARCHAR(15) NOT NULL,
+    instructions VARCHAR(320) NULL,
+    priority SMALLINT NOT NULl,
+    name VARCHAR(64) NOT NULL,
+    CONSTRAINT priority_above_0 CHECK(priority > 0)
+);
+
+CREATE TABLE phone_numbers
+(
+    phone_id INT NOT NULL,
+    type personnel_type NOT NULL,
+    personnel_id INT NOT NULL,
+    FOREIGN KEY (phone_id)
+        REFERENCES phone(id)
             ON DELETE CASCADE
             ON UPDATE CASCADE
 );
