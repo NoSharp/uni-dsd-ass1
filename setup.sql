@@ -126,7 +126,7 @@ CREATE TABLE dog(
     name VARCHAR(255) NOT NULL,
     dob DATE NOT NULL,
     kennel_id INT NULL,
-    flea_treatment DATE NOT NULL,
+    breed VARCHAR(32) NOT NULL,
     FOREIGN KEY(kennel_id)
         REFERENCES kennel(id)
             ON DELETE CASCADE
@@ -139,11 +139,6 @@ CREATE TABLE treatment(
     date DATE NOT NULL,
     type INT NOT NULL,
     valid_until DATE NOT NULL,
-    dog_id INT NOT NULL,
-    FOREIGN KEY (dog_id)
-        REFERENCES dog(id)
-            ON DELETE CASCADE
-            ON UPDATE CASCADE,
     FOREIGN KEY (type)
         REFERENCES treatment_type(id)
             ON DELETE CASCADE
@@ -216,6 +211,52 @@ CREATE TABLE phone_numbers
             ON UPDATE CASCADE
 );
 
+DROP PROCEDURE IF EXISTS add_owner_address;
+CREATE PROCEDURE add_owner_address(
+    IN p_owner_id INT,
+    IN p_postcode VARCHAR(32),
+    IN p_county VARCHAR(255),
+    IN p_country VARCHAR(50),
+    IN p_first_line VARCHAR(100),
+    IN p_second_line VARCHAR(100) DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    pv_id INT;
+BEGIN
+
+    INSERT INTO address(first_line, second_line, postcode, county, country) VALUES
+        (p_first_line, p_second_line, p_postcode, p_county, p_country) RETURNING id INTO pv_id;
+
+    INSERT INTO addresses(personnel_id, address_id, type) values (p_owner_id, pv_id, 'OWNER'::personnel_type);
+
+END
+$$;
+
+DROP PROCEDURE IF EXISTS add_owner_dog;
+CREATE PROCEDURE add_owner_dog(
+    IN p_owner_id INT,
+    IN p_name VARCHAR(255),
+    IN p_dob DATE,
+    IN p_breed VARCHAR(32)
+)
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    pv_id INT;
+BEGIN
+
+    INSERT INTO dog(name, dob, breed) VALUES
+        (p_name, p_dob, p_breed) RETURNING id INTO pv_id;
+
+    INSERT INTO dog_owners(dog_id, owner_id) VALUES(pv_id, p_owner_id);
+
+END
+$$;
+
 
 -- TODO: Handle cascade deletion on polymorphic relationships.
 -- Handle the Polymorphic relations
@@ -224,19 +265,17 @@ DROP FUNCTION IF EXISTS enforce_poly_fk_addresses CASCADE ;
 CREATE FUNCTION enforce_poly_fk_addresses()
     RETURNS TRIGGER
 AS
-$enforce_poly$
+$$
 
 BEGIN
 
     /* NOTE: I did consider to construct the sql statements dynamically, depending on the type
-       however, this lead to the possibility of SQL injection down the line.
+       however, this could lead to the possibility of SQL injection down the line.
        Which I wasn't willing to introduce, I'm aware there's a method to prepare dynamic sql queries within
-       psql, however I believe that costs readability.
+       psql securely without sql injection, however I believe that costs readability.
     */
     CASE NEW.type
         WHEN 'OWNER'::personnel_type THEN
-
-             RAISE NOTICE ' DOES EXIST: %s %s', EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id), (SELECT COUNT(id) FROM owner WHERE id = NEW.personnel_id);
 
             IF( NOT EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No owner.id found for personnel id.';
@@ -259,7 +298,7 @@ BEGIN
 
 END
 
-$enforce_poly$
+$$
 LANGUAGE plpgsql;
 
 
@@ -268,13 +307,12 @@ DROP FUNCTION IF EXISTS enforce_poly_fk_phone_numbers CASCADE ;
 CREATE FUNCTION enforce_poly_fk_phone_numbers()
     RETURNS TRIGGER
 AS
-$enforce_poly$
+$$
 
 BEGIN
 
     CASE NEW.type
         WHEN 'OWNER'::personnel_type THEN
-            RAISE NOTICE ' DOES EXIST: %s %s', EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id), (SELECT COUNT(id) FROM owner WHERE id = NEW.personnel_id);
 
             IF( NOT EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No owner.id found for personnel id.';
@@ -284,6 +322,7 @@ BEGIN
                 RAISE EXCEPTION 'Duplicate address for owner.id found.';
             END IF;
         WHEN 'STAFF'::personnel_type THEN
+
             IF( EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No staff.id found';
             END IF;
@@ -297,7 +336,7 @@ BEGIN
 
 END
 
-$enforce_poly$
+$$
 LANGUAGE plpgsql;
 
 DROP FUNCTION IF EXISTS enforce_priority_phone_numbers;
@@ -305,7 +344,7 @@ DROP FUNCTION IF EXISTS enforce_priority_phone_numbers;
 CREATE FUNCTION enforce_priority_phone_numbers()
     RETURNS TRIGGER
 AS
-$enforce_poly$
+$$
 
 BEGIN
 
@@ -334,7 +373,7 @@ BEGIN
 
 END
 
-$enforce_poly$
+$$
 LANGUAGE plpgsql;
 
 CREATE TRIGGER enforce_poly_fk_phone_numbers_trigger
@@ -347,11 +386,67 @@ CREATE TRIGGER enforce_poly_fk_addresses_trigger
     ON addresses
     FOR EACH ROW EXECUTE PROCEDURE enforce_poly_fk_addresses();
 
-BEGIN;
-SET datestyle = dmy;
 
-INSERT INTO owner(first_name, last_name, dob) VALUES('Test', 'Test2', DATE '15-03-2003');
-INSERT INTO addresses(personnel_id, address_id, type) VALUES(6,50,'OWNER');
--- INSERT INTO addresses(personnel_id, address_id, type) VALUES(2,1,'OWNER');
+BEGIN;
+
+    SET datestyle = dmy;
+    INSERT INTO owner(first_name, last_name, dob) VALUES('John', 'Smith', '15/03/1994');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Sandra', 'Smith', '15/03/1968');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Constince', 'Jerma', '10/03/1967');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Kernle', 'Panic', '15/03/1954');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Linus', 'Torvalds', '15/04/2001');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Micheal', 'Forbes', '15/03/1999');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Linux', 'Tundra', '1/03/1979');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Alan', 'Gates', '25/11/1989');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Debra', 'Lynn', '15/03/1953');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Gordon', 'Ramsay', '07/10/1987');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Falcon', 'Heene', '10/01/2003');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Zeal', 'John', '08/05/1978');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('John', 'Boris', '15/12/1920');
+    INSERT INTO owner(first_name, last_name, dob) VALUES('Homer', 'Smith', '25/02/1953');
+
+    CALL add_owner_address(1, 'N4 7EB', 'South Lanarkshire', 'Costa Rica', '90 Harry summit');
+    CALL add_owner_address(2, 'LL4E 6NT', 'Cleveland', 'Gabon', '893 Thomas drives');
+    CALL add_owner_address(3, 'N8 9YT', 'Dorset', 'Panama', 'Flat 30 Herbert locks');
+    CALL add_owner_address(4, 'S5D 4QE', 'Greater London', 'Korea', '7 Bowen forks');
+    CALL add_owner_address(5, 'NR7H 1FY', 'Orkney Islands', 'Tajikistan', 'Studio 62k White plain');
+    CALL add_owner_address(6, 'G3E 4GQ', 'Caernarvonshire', 'Burkina Faso', '346 Ali forest');
+    CALL add_owner_address(7, 'KA4X 7YX', 'East Dunbartonshire', 'Papua New Guinea', 'Studio 7 Jordan lock');
+    CALL add_owner_address(8, 'E6S 6YR', 'Wiltshire', 'Slovakia (Slovak Republic)', '07 Amber lake');
+    CALL add_owner_address(9, 'G9 2DJ', 'Flintshire', 'Barbados', '85 Yates fork');
+    CALL add_owner_address(10, 'N7 7QJ', 'Tyrone', 'Lesotho', 'Studio 15 Eric viaduct');
+    CALL add_owner_address(11, 'G91 6BS', 'North Yorkshire', 'Bouvet Island (Bouvetoya)', '356 Webster meadows');
+    CALL add_owner_address(12, 'PO5 5SU', 'Dundee City', 'Spain', 'Studio 02S Hart shores');
+    CALL add_owner_address(13, 'L8 6EG', 'Somerset', 'Malawi', '0 Robson trafficway');
+    CALL add_owner_address(14, 'S05 9EF', 'Cardiganshire', 'Armenia', 'Flat 3 Cunningham stream');
+
+    CALL add_owner_dog(1, 'Julian', '27/05/1976', 'Pug');
+    CALL add_owner_dog(1, 'John', '08/04/2003', 'Pug');
+    CALL add_owner_dog(2, 'Lorraine', '23/01/2021', 'German pinscher');
+    CALL add_owner_dog(3, 'Dean', '01/07/1989', 'German pinscher');
+    CALL add_owner_dog(4, 'Holly', '11/10/1996', 'German pinscher');
+    CALL add_owner_dog(5, 'Susan', '10/04/2002', 'Bulldog');
+    CALL add_owner_dog(6, 'Nicholas', '06/04/2013', 'German pinscher');
+    CALL add_owner_dog(7, 'Leon', '24/01/1979', 'Neapolitan Mastiff');
+    CALL add_owner_dog(8, 'Mitchell', '29/03/2016', 'American Bully');
+    CALL add_owner_dog(9, 'Jenna', '12/07/2016', 'Pug');
+    CALL add_owner_dog(10, 'Danny', '27/08/1984', 'English springer spaniel');
+    CALL add_owner_dog(11, 'Raymond', '21/04/1971', 'English springer spaniel');
+    CALL add_owner_dog(12, 'Lee', '14/10/1972', 'Chow chow');
+    CALL add_owner_dog(13, 'Pauline', '04/02/1976', 'German pinscher');
+    CALL add_owner_dog(14, 'Jake', '08/04/1993', 'Pug');
+
+
+
+
+COMMIT;
+
+
+
+
+
+
+BEGIN;
+
 
 COMMIT;
