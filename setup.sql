@@ -107,7 +107,7 @@ CREATE TABLE phone
     instructions VARCHAR(320) NULL,
     priority SMALLINT NOT NULl,
     name VARCHAR(64) NOT NULL,
-    CONSTRAINT priority_above_0 CHECK(priority > 0)
+    CONSTRAINT priority_above_0 CHECK(priority >= 0)
 );
 
 
@@ -257,6 +257,30 @@ BEGIN
 END
 $$;
 
+DROP PROCEDURE IF EXISTS add_owner_phone_number;
+CREATE PROCEDURE add_owner_phone_number(
+    IN p_owner_id INT,
+    IN p_country_code VARCHAR(5) ,
+    IN p_number VARCHAR(15) ,
+    IN p_instructions VARCHAR(320) ,
+    IN p_priority INT,
+    IN p_name VARCHAR(64)
+)
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    pv_id INT;
+BEGIN
+
+    INSERT INTO phone(country_code, number, instructions, priority, name) VALUES
+        (p_country_code, p_number, p_instructions, p_priority, p_name) RETURNING id INTO pv_id;
+
+    INSERT INTO phone_numbers(phone_id, personnel_id, type) VALUES(pv_id, p_owner_id, 'OWNER'::personnel_type);
+
+END
+$$;
+
 
 -- TODO: Handle cascade deletion on polymorphic relationships.
 -- Handle the Polymorphic relations
@@ -281,19 +305,15 @@ BEGIN
                 RAISE EXCEPTION 'No owner.id found for personnel id.';
             END IF;
 
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
-                RAISE EXCEPTION 'Duplicate address for owner.id found.';
-            END IF;
         WHEN 'STAFF'::personnel_type THEN
             IF( NOT EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No staff.id found';
             END IF;
-
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
-                RAISE EXCEPTION 'Duplicate address for owner.id found.';
-            END IF;
     END CASE;
 
+    IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
+        RAISE EXCEPTION 'Duplicate address for owner.id found.';
+    END IF;
     RETURN NEW;
 
 END
@@ -318,19 +338,17 @@ BEGIN
                 RAISE EXCEPTION 'No owner.id found for personnel id.';
             END IF;
 
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
-                RAISE EXCEPTION 'Duplicate address for owner.id found.';
-            END IF;
         WHEN 'STAFF'::personnel_type THEN
 
             IF( EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No staff.id found';
             END IF;
 
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
-                RAISE EXCEPTION 'Duplicate address for owner.id found.';
-            END IF;
     END CASE;
+
+    IF (EXISTS(SELECT phone_id FROM phone_numbers WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
+        RAISE EXCEPTION 'Duplicate address for owner.id found.';
+    END IF;
 
     RETURN NEW;
 
@@ -346,28 +364,23 @@ CREATE FUNCTION enforce_priority_phone_numbers()
 AS
 $$
 
+DECLARE
+    pv_phone_priority INT;
+    pv_priority_count INT;
 BEGIN
 
-    CASE NEW.type
-        WHEN 'OWNER'::personnel_type THEN
-            SELECT EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) AS value;
+    SELECT priority INTO pv_phone_priority FROM phone WHERE id = NEW.phone_id;
 
-            IF( NOT EXISTS(SELECT id FROM owner WHERE id = NEW.personnel_id) ) THEN
-                RAISE EXCEPTION 'No owner.id found for personnel id.';
-            END IF;
+    SELECT count(id)
+        INTO pv_priority_count
+        FROM phone_numbers
+        INNER JOIN phone
+            ON phone_numbers.phone_id = phone.id
+    WHERE phone.priority = priority AND phone_numbers.personnel_id = NEW.personnel_id;
 
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
-                RAISE EXCEPTION 'Duplicate address for owner.id found.';
-            END IF;
-        WHEN 'STAFF'::personnel_type THEN
-            IF( NOT EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
-                RAISE EXCEPTION 'No staff.id found';
-            END IF;
-
-            IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
-                RAISE EXCEPTION 'Duplicate address for staff.id found.';
-            END IF;
-    END CASE;
+    IF(pv_priority_count > 0) THEN
+        RAISE EXCEPTION 'Duplicate phone number priorities.';
+    END IF;
 
     RETURN NEW;
 
@@ -375,6 +388,12 @@ END
 
 $$
 LANGUAGE plpgsql;
+
+CREATE TRIGGER enforce_priority_phone_numbers_trigger
+    BEFORE insert
+    ON phone_numbers
+    FOR EACH ROW EXECUTE PROCEDURE enforce_priority_phone_numbers();
+
 
 CREATE TRIGGER enforce_poly_fk_phone_numbers_trigger
     BEFORE insert
@@ -436,17 +455,19 @@ BEGIN;
     CALL add_owner_dog(13, 'Pauline', '04/02/1976', 'German pinscher');
     CALL add_owner_dog(14, 'Jake', '08/04/1993', 'Pug');
 
-
-
-
-COMMIT;
-
-
-
-
-
-
-BEGIN;
-
+    CALL add_owner_phone_number(1, '+423', '328547982', 'Dolorem enim quod repellendus fugiat eius laborum.', 1, 'Andrea');
+    CALL add_owner_phone_number(2, '+961', '322844141', 'Quidem labore at dicta nobis cupiditate vel minus rerum repellendus veritatis voluptate.', 1, 'Alice');
+    CALL add_owner_phone_number(3, '+370', '267894541', 'Quia perferendis cupiditate quidem veniam quas cupiditate eum possimus porro.', 1, 'Scott');
+    CALL add_owner_phone_number(4, '+993', '559033859', 'Placeat minus amet error cum cum sapiente rerum mollitia.', 1, 'Luke');
+    CALL add_owner_phone_number(5, '+248', '675602721', 'Quidem sint corrupti sunt numquam quaerat sit quod temporibus tenetur sapiente.', 1, 'Jill');
+    CALL add_owner_phone_number(6, '+56', '167967832', 'Adipisci laborum vitae dignissimos temporibus occaecati pariatur mollitia fugiat ex dolorum explicabo.', 1, 'Aimee');
+    CALL add_owner_phone_number(7, '+269', '3701786', 'Autem facere veniam consequuntur itaque ad.', 1, 'Ruth');
+    CALL add_owner_phone_number(8, '+45', '810098691', 'Culpa nesciunt autem repellendus cum voluptates.', 1, 'Charlie');
+    CALL add_owner_phone_number(9, '+968', '25771105', 'Possimus a exercitationem sint cupiditate vel neque aspernatur itaque itaque saepe illum qui.', 1, 'Philip');
+    CALL add_owner_phone_number(10, '+1', '324885055', 'Minima corporis animi perferendis voluptas tempora hic.', 1, 'Julie');
+    CALL add_owner_phone_number(11, '+502', '441069271', 'Soluta sequi possimus voluptate illo corporis.', 1, 'Graeme');
+    CALL add_owner_phone_number(12, '+63', '106763806', 'Eligendi omnis sequi laudantium porro velit nihil.', 1, 'Albert');
+    CALL add_owner_phone_number(13, '+356', '573565356', 'Rem recusandae error maiores aperiam a accusamus sequi numquam.', 1, 'Glenn');
+    CALL add_owner_phone_number(14, '+502', '129085269', 'Voluptatem excepturi hic temporibus placeat iusto consequuntur quas officiis voluptatibus.', 1, 'Jacob');
 
 COMMIT;
