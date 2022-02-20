@@ -311,7 +311,7 @@ BEGIN
             END IF;
     END CASE;
 
-    IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
+    IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type AND address_id = NEW.address_id)) THEN
         RAISE EXCEPTION 'Duplicate address for owner.id found.';
     END IF;
     RETURN NEW;
@@ -346,8 +346,8 @@ BEGIN
 
     END CASE;
 
-    IF (EXISTS(SELECT phone_id FROM phone_numbers WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
-        RAISE EXCEPTION 'Duplicate address for owner.id found.';
+    IF (EXISTS(SELECT phone_id FROM phone_numbers WHERE personnel_id = NEW.personnel_id AND type = NEW.type AND phone_id = NEW.phone_id)) THEN
+        RAISE EXCEPTION 'Duplicate phone id for owner.id found.';
     END IF;
 
     RETURN NEW;
