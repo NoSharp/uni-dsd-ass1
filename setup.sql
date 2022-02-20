@@ -470,4 +470,42 @@ BEGIN;
     CALL add_owner_phone_number(13, '+356', '573565356', 'Rem recusandae error maiores aperiam a accusamus sequi numquam.', 1, 'Glenn');
     CALL add_owner_phone_number(14, '+502', '129085269', 'Voluptatem excepturi hic temporibus placeat iusto consequuntur quas officiis voluptatibus.', 1, 'Jacob');
 
+    INSERT INTO treatment_type(name) VALUES('influenza vaccine');
+    INSERT INTO treatment_type(name) VALUES('flea treatment');
+    INSERT INTO treatment_type(name) VALUES('bubonic plague vaccine');
+    INSERT INTO treatment_type(name) VALUES('zombie vaccine');
+    INSERT INTO treatment_type(name) VALUES('zombies-reimagined-supreme vaccine');
+    INSERT INTO treatment_type(name) VALUES('more-zombies vaccine');
+
+    INSERT INTO treatment(date, type, valid_until) VALUES ('13/07/2007', 2, '19/06/2098');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('01/12/1993', 3, '25/10/2045');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('03/09/2004', 6, '14/01/2112');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('18/09/1995', 4, '11/01/2055');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('12/11/2018', 2, '20/08/2110');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('30/09/1979', 4, '13/11/2082');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('29/04/1990', 3, '02/09/2153');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('03/08/2011', 4, '22/06/2053');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('18/11/1985', 2, '21/03/2039');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('02/03/2015', 3, '01/10/2252');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('19/02/1971', 5, '30/11/2120');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('27/01/2009', 2, '26/01/2173');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('16/12/1980', 1, '14/10/2175');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('07/10/1985', 6, '20/03/2027');
+
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (1,1);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (2,2);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (3,3);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (4,4);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (5,5);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (6,6);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (7,7);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (8,8);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (9,9);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (10,10);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (11,11);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (12,12);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (13,13);
+    INSERT INTO treatments(treatment_id, dog_id) VALUES (14,14);
+
+
 COMMIT;
