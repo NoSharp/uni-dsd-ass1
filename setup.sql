@@ -257,6 +257,31 @@ BEGIN
 END
 $$;
 
+DROP PROCEDURE IF EXISTS add_food_requirement;
+CREATE PROCEDURE add_food_requirement(
+    IN p_dog_id INT,
+    IN p_food_name VARCHAR(50),
+    IN p_mins_since_start INT,
+    IN p_instructions VARCHAR(255),
+    IN p_size INT
+)
+LANGUAGE plpgsql
+AS
+$$
+    DECLARE
+        pv_id INT;
+    BEGIN
+
+        INSERT INTO food_requirement(food_name, mins_since_start, instructions, size)
+            VALUES (p_food_name, p_mins_since_start, p_instructions, p_size)
+            RETURNING id
+        INTO pv_id;
+
+        INSERT INTO food_requirements(dog_id, food_requirement_id) VALUES (p_dog_id, pv_id);
+
+    END
+$$;
+
 DROP PROCEDURE IF EXISTS add_owner_phone_number;
 CREATE PROCEDURE add_owner_phone_number(
     IN p_owner_id INT,
@@ -506,6 +531,120 @@ BEGIN;
     INSERT INTO treatments(treatment_id, dog_id) VALUES (12,12);
     INSERT INTO treatments(treatment_id, dog_id) VALUES (13,13);
     INSERT INTO treatments(treatment_id, dog_id) VALUES (14,14);
+
+    CALL add_food_requirement(1, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(2, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(3, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(4, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(5, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(6, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(7, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(8, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(9, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(10, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(12, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(13, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(14, 'Colgate', 50, 'Lorem Ipsum', 60);
+
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 1, 1,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 2,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 3, 3,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 2, 4,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 2, 5,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 3, 6,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 2, 7,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 8,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 1, 9,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 3, 10,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 1, 11,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 2, 12,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 2, 13,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 1, 14,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 15,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 16,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 17,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 2, 18,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 19,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 1, 20,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 3, 21,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 3, 22,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 3, 23,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 2, 24,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 2, 25,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 3, 26,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 3, 27,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 2, 28,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 29,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 30,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 1, 31,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 1, 32,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 3, 33,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 2, 34,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 1, 35,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 36,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 3, 37,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 38,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 1, 39,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 2, 40,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 3, 41,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 2, 42,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 3, 43,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 44,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 45,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 3, 46,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 1, 47,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 48,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 49,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 50,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 3, 51,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 52,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 53,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 54,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 3, 55,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 56,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 1, 57,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 58,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 59,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 2, 60,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 3, 61,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 3, 62,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 3, 63,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 64,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 1, 65,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 2, 66,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 67,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 2, 68,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 69,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 2, 70,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 1, 71,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 72,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 3, 73,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 74,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 2, 75,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 1, 76,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 2, 77,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 3, 78,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 1, 79,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 80,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 1, 81,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 2, 82,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (2, 3, 83,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 3, 84,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 3, 85,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 1, 86,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 2, 87,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 2, 88,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 89,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 1, 90,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 1, 91,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 2, 92,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (5, 1, 93,1, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 1, 94,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (4, 3, 95,3, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 96,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 1, 97,2, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 98,4, 'Lorem ipsum');
+    INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 2, 99,2, 'Lorem ipsum');
 
 
 COMMIT;
