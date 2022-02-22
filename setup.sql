@@ -801,9 +801,39 @@ BEGIN;
     INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (4, 'January 12 09:00:00 1999 BST', 'January 12 17:00:00 2022 BST',0::bit );
     INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (5, 'January 12 09:00:00 1999 BST', 'January 12 17:00:00 2022 BST',0::bit );
 
-    INSERT INTO booking(dog_id, start, expiration) VALUES (1, 'January 12 09:00:00 1999 BST', 'January 28 09:00:00 2022 BST');
-    INSERT INTO booking(dog_id, start, expiration) VALUES (2, 'January 12 09:00:00 1999 BST', 'January 31 09:00:00 2022 BST');
-    INSERT INTO booking(dog_id, start, expiration) VALUES (3, 'January 12 09:00:00 1999 BST', 'January 28 17:00:00 2022 BST');
-    INSERT INTO booking(dog_id, start, expiration) VALUES (4, 'February 12 09:00:00 1999 BST', 'February 28 17:00:00 2022 BST');
+    INSERT INTO booking(dog_id, start, expiration) VALUES (1, 'January 12 09:00:00 2022 BST', 'January 28 09:00:00 2022 BST');
+    INSERT INTO booking(dog_id, start, expiration) VALUES (2, 'January 12 09:00:00 2022 BST', 'January 31 09:00:00 2022 BST');
+    INSERT INTO booking(dog_id, start, expiration) VALUES (3, 'January 12 09:00:00 2022 BST', 'January 28 17:00:00 2022 BST');
+    INSERT INTO booking(dog_id, start, expiration) VALUES (4, 'February 12 09:00:00 2022 BST', 'February 28 17:00:00 2022 BST');
 
 COMMIT;
+
+
+INSERT INTO addresses(personnel_id, address_id, type) VALUES(1,1, 'VET'::personnel_type);
+
+
+
+SELECT booking.id as booking_id,
+       dog.id AS dog_id,
+       dog.name as dog_name,
+       dog.breed as dog_breed,
+       CONCAT(owner.first_name, ' ', owner.last_name) as owner_name,
+       booking.expiration as expiration,
+       booking.start as start
+FROM
+    booking
+    INNER JOIN dog
+        ON dog.id = booking.dog_id
+    INNER JOIN dog_owners
+            ON dog.id = dog_owners.dog_id
+    INNER JOIN owner
+            ON dog_owners.owner_id = owner.id
+    WHERE
+          booking.start >= 'February 12 00:00:00 1999 BST'::timestamptz
+        AND booking.start < ('February 12 00:00:00 1999 BST'::timestamptz + interval '24 hours');
+
+--  is fleat treatment recent-enough?
+--  is
+
+-- SELECT * FROM booking  WHERE booking.start ?z 'February 12 00:00:00 2022 BST'::timestamptz;
+--         AND booking.start < ('February 12 00:00:00 2022 BST'::timestamptz + interval '25 hours');
