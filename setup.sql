@@ -890,6 +890,7 @@ AND
 AND
     shift.complete::int = 0;
 
+-- Get the next feed times (do tomorrow)
 
 -- SELECT * FROM booking  WHERE booking.start ?z 'February 12 00:00:00 2022 BST'::timestamptz;
 --         AND booking.start < ('February 12 00:00:00 2022 BST'::timestamptz + interval '25 hours');
