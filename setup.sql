@@ -596,6 +596,9 @@ BEGIN;
     CALL add_owner_dog(13, 'Leslie', '12/05/2008', 'Pug','991200731122943');
     CALL add_owner_dog(14, 'Frederick', '17/04/2016', 'Neapolitan Mastiff','978316158625649');
 
+    INSERT INTO dog_owners(dog_id, owner_id) VALUES(1,2);
+
+    INSERT INTO dog_owners(dog_id, owner_id) VALUES(4,2);
     CALL add_owner_phone_number(1, '+423', '328547982', 'Dolorem enim quod repellendus fugiat eius laborum.', 1, 'Andrea');
     CALL add_owner_phone_number(2, '+961', '322844141', 'Quidem labore at dicta nobis cupiditate vel minus rerum repellendus veritatis voluptate.', 1, 'Alice');
     CALL add_owner_phone_number(3, '+370', '267894541', 'Quia perferendis cupiditate quidem veniam quas cupiditate eum possimus porro.', 1, 'Scott');
@@ -618,7 +621,7 @@ BEGIN;
     INSERT INTO treatment_type(name) VALUES('zombies-reimagined-supreme vaccine');
     INSERT INTO treatment_type(name) VALUES('more-zombies vaccine');
 
-    INSERT INTO treatment(date, type, valid_until) VALUES ('13/07/2007', 2, '19/06/2098');
+    INSERT INTO treatment(date, type, valid_until) VALUES ('13/07/2007', 2, '19/06/2008');
     INSERT INTO treatment(date, type, valid_until) VALUES ('01/12/1993', 3, '25/10/2045');
     INSERT INTO treatment(date, type, valid_until) VALUES ('03/09/2004', 6, '14/01/2112');
     INSERT INTO treatment(date, type, valid_until) VALUES ('18/09/1995', 4, '11/01/2055');
@@ -795,11 +798,11 @@ BEGIN;
     CALL add_staff('Hazel','Marshall', '08/06/1985', 22025, 2, '870', '773930421', 'Quo eos ullam laboriosam ipsum ducimus ex.', 1, 'business', 'G2 2GA', 'Antrim', 'Israel', 'Studio 61 Carr street');
     CALL add_staff('Glenn','Robinson', '14/02/2018', 32510, 1, '855', '930996820', 'Blanditiis amet ipsam nemo est iure accusantium nemo atque molestias sapiente mollitia molestias architecto.', 1, 'business', 'G3 5XF', 'Greater Manchester', 'Italy', 'Studio 59 Ann dam');
 
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (1, 'January 8 09:00:00 1999 BST', 'January 8 17:00:00 2022 BST',0::bit );
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (2, 'January 10 09:00:00 1999 BST', 'January 12 10:00:00 2022 BST',0::bit );
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (3, 'January 11 09:00:00 1999 BST', 'January 12 11:00:00 2022 BST',0::bit );
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (4, 'January 12 09:00:00 1999 BST', 'January 12 17:00:00 2022 BST',0::bit );
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (5, 'January 12 09:00:00 1999 BST', 'January 12 17:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (1, 'January 8 09:00:00 2022 BST', 'January 8 17:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (2, 'January 10 09:00:00 2022 BST', 'January 12 10:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (3, 'January 11 09:00:00 2022 BST', 'January 12 11:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (4, 'January 12 09:00:00 2022 BST', 'January 12 17:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (5, 'January 12 09:00:00 2022 BST', 'January 12 17:00:00 2022 BST',0::bit );
 
     INSERT INTO booking(dog_id, start, expiration) VALUES (1, 'January 12 09:00:00 2022 BST', 'January 28 09:00:00 2022 BST');
     INSERT INTO booking(dog_id, start, expiration) VALUES (2, 'January 12 09:00:00 2022 BST', 'January 31 09:00:00 2022 BST');
@@ -807,12 +810,13 @@ BEGIN;
     INSERT INTO booking(dog_id, start, expiration) VALUES (4, 'February 12 09:00:00 2022 BST', 'February 28 17:00:00 2022 BST');
 
 COMMIT;
+   INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (5, 'February 12 09:00:00 2022 BST', 'February 12 17:00:00 2022 BST',0::bit );
 
 
-INSERT INTO addresses(personnel_id, address_id, type) VALUES(1,1, 'VET'::personnel_type);
+-- INSERT INTO addresses(personnel_id, address_id, type) VALUES(1,1, 'VET'::personnel_type);
 
 
-
+-- Get all of today's bookings.
 SELECT booking.id as booking_id,
        dog.id AS dog_id,
        dog.name as dog_name,
@@ -825,15 +829,67 @@ FROM
     INNER JOIN dog
         ON dog.id = booking.dog_id
     INNER JOIN dog_owners
-            ON dog.id = dog_owners.dog_id
+        ON dog.id = dog_owners.dog_id
     INNER JOIN owner
-            ON dog_owners.owner_id = owner.id
+        ON dog_owners.owner_id = owner.id
     WHERE
-          booking.start >= 'February 12 00:00:00 1999 BST'::timestamptz
-        AND booking.start < ('February 12 00:00:00 1999 BST'::timestamptz + interval '24 hours');
+          booking.start >= 'February 12 00:00:00 2022 BST'::timestamptz
+        AND booking.start < ('February 12 00:00:00 2022 BST'::timestamptz + interval '24 hours');
 
---  is fleat treatment recent-enough?
---  is
+--  get dogs with flea treatments that have expired
+SELECT
+    dog.id as dog_id,
+    dog.kennel_id as kennel_id,
+    dog.name as dog_name,
+    CONCAT(owner.first_name, ' ', owner.last_name) as owner_name,
+    -- "You will be marked on the complexity of each query, as well as the usefulness of the output", ok.
+    STRING_AGG(
+        (
+            SELECT CONCAT(phone.country_code, phone.number, '(', phone.instructions, ')')
+            FROM phone_numbers
+            INNER JOIN phone ON
+                phone.id = phone_numbers.phone_id
+            WHERE personnel_id = owner.id AND type = 'OWNER'::personnel_type
+            ORDER BY phone.priority ASC
+        ), ',') as phone_numbers
+FROM
+    dog
+INNER JOIN dog_owners
+    ON dog.id = dog_owners.dog_id
+INNER JOIN owner
+    ON dog_owners.owner_id = owner.id
+INNER JOIN treatments
+    ON treatments.dog_id = dog.id
+INNER JOIN treatment
+    ON treatments.treatment_id = treatment.id
+INNER JOIN treatment_type
+    ON treatment.type = treatment_type.id
+WHERE
+    treatment.type = (SELECT id FROM treatment_type WHERE treatment_type.name = 'flea treatment')
+AND
+    treatment.valid_until < '12/2/2022'::date
+GROUP BY
+    dog.id, owner.id;
+
+-- Get staff who have a shift today, and their times.
+SELECT
+    CONCAT(staff.first_name, ' ', staff.last_name) as staff_name,
+    CONCAT(TO_CHAR(DATE_PART('HOUR',start_time),'fm00'), ':', TO_CHAR(DATE_PART('MINUTE', start_time), 'fm00')) as start_time,
+    CONCAT(TO_CHAR(DATE_PART('HOUR',end_time), 'fm00'), ':',TO_CHAR(DATE_PART('MINUTE', end_time), 'fm00')) as end_time,
+    staff_roles.role_name as role
+FROM
+    shift
+INNER JOIN staff
+    ON shift.staff_id = staff.id
+INNER JOIN staff_roles
+    on staff.role_id = staff_roles.id
+WHERE
+    shift.start_time >= 'February 12 00:00:00 2022 BST'::timestamptz
+AND
+    shift.end_time < ('February 12 00:00:00 2022 BST'::timestamptz + interval '24 hours')
+AND
+    shift.complete::int = 0;
+
 
 -- SELECT * FROM booking  WHERE booking.start ?z 'February 12 00:00:00 2022 BST'::timestamptz;
 --         AND booking.start < ('February 12 00:00:00 2022 BST'::timestamptz + interval '25 hours');
