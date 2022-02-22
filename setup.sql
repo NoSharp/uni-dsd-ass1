@@ -179,7 +179,8 @@ CREATE TABLE booking(
     FOREIGN KEY(dog_id)
         REFERENCES dog(id)
             ON DELETE CASCADE
-            ON UPDATE CASCADE
+            ON UPDATE CASCADE,
+    CONSTRAINT expiration_gtr_start CHECK (expiration > start)
 );
 
 CREATE TABLE dog_owners
@@ -794,10 +795,15 @@ BEGIN;
     CALL add_staff('Hazel','Marshall', '08/06/1985', 22025, 2, '870', '773930421', 'Quo eos ullam laboriosam ipsum ducimus ex.', 1, 'business', 'G2 2GA', 'Antrim', 'Israel', 'Studio 61 Carr street');
     CALL add_staff('Glenn','Robinson', '14/02/2018', 32510, 1, '855', '930996820', 'Blanditiis amet ipsam nemo est iure accusantium nemo atque molestias sapiente mollitia molestias architecto.', 1, 'business', 'G3 5XF', 'Greater Manchester', 'Italy', 'Studio 59 Ann dam');
 
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (1, 'January 8 09:00:00 1999 PST', 'January 8 17:00:00 2022 PST',0 );
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (2, 'January 10 09:00:00 1999 PST', 'January 12 10:00:00 2022 PST',0 );
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (3, 'January 11 09:00:00 1999 PST', 'January 12 11:00:00 2022 PST',0 );
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (4, 'January 12 09:00:00 1999 PST', 'January 12 17:00:00 2022 PST',0 );
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (5, 'January 12 09:00:00 1999 PST', 'January 12 17:00:00 2022 PST',0 );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (1, 'January 8 09:00:00 1999 BST', 'January 8 17:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (2, 'January 10 09:00:00 1999 BST', 'January 12 10:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (3, 'January 11 09:00:00 1999 BST', 'January 12 11:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (4, 'January 12 09:00:00 1999 BST', 'January 12 17:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (5, 'January 12 09:00:00 1999 BST', 'January 12 17:00:00 2022 BST',0::bit );
+
+    INSERT INTO booking(dog_id, start, expiration) VALUES (1, 'January 12 09:00:00 1999 BST', 'January 28 09:00:00 2022 BST');
+    INSERT INTO booking(dog_id, start, expiration) VALUES (2, 'January 12 09:00:00 1999 BST', 'January 31 09:00:00 2022 BST');
+    INSERT INTO booking(dog_id, start, expiration) VALUES (3, 'January 12 09:00:00 1999 BST', 'January 28 17:00:00 2022 BST');
+    INSERT INTO booking(dog_id, start, expiration) VALUES (4, 'February 12 09:00:00 1999 BST', 'February 28 17:00:00 2022 BST');
 
 COMMIT;
