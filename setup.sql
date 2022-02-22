@@ -1,5 +1,5 @@
 DROP TYPE IF EXISTS personnel_type CASCADE;
-CREATE TYPE personnel_type AS ENUM ('OWNER', 'STAFF');
+CREATE TYPE personnel_type AS ENUM ('OWNER', 'STAFF', 'VET');
 
 DROP TABLE IF EXISTS booking CASCADE;
 DROP TABLE IF EXISTS dog CASCADE;
@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS address CASCADE;
 DROP TABLE IF EXISTS dog_owners CASCADE;
 DROP TABLE IF EXISTS food_requirements CASCADE;
 DROP TABLE IF EXISTS phone_numbers CASCADE;
+DROP TABLE IF EXISTS vet CASCADE;
 
 CREATE TABLE address
 (
@@ -27,6 +28,12 @@ CREATE TABLE address
     postcode VARCHAR(32) NOT NULL,
     county VARCHAR(255) NULL,
     country VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE vet
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(255) NOT NULL
 );
 
 
@@ -67,9 +74,9 @@ CREATE TABLE staff
     first_name VARCHAR(128) NOT NULL,
     last_name VARCHAR(128) NOT NULL,
     dob DATE NOT NULL,
-    salary INT NOT NULL
+    salary INT NOT NULL,
+    role_id INT NOT NULL
 );
-
 
 CREATE TABLE shift
 (
@@ -79,7 +86,6 @@ CREATE TABLE shift
     end_time TIMESTAMPTZ NOT NULl,
     complete BIT NOT NULL
 );
-
 
 CREATE TABLE owner
 (
@@ -127,6 +133,12 @@ CREATE TABLE dog(
     dob DATE NOT NULL,
     kennel_id INT NULL,
     breed VARCHAR(32) NOT NULL,
+    vet_id INT NULL,
+    microchip_id VARCHAR(15) NOT NULL UNIQUE ,
+    FOREIGN KEY (vet_id)
+        REFERENCES vet(id)
+            ON DELETE SET NULL
+            ON UPDATE CASCADE,
     FOREIGN KEY(kennel_id)
         REFERENCES kennel(id)
             ON DELETE CASCADE
@@ -211,6 +223,90 @@ CREATE TABLE phone_numbers
             ON UPDATE CASCADE
 );
 
+DROP PROCEDURE IF EXISTS add_vet;
+CREATE PROCEDURE add_vet(
+    IN p_name VARCHAR(32),
+    IN p_country_code VARCHAR(5),
+    IN p_number VARCHAR(15),
+    IN p_instructions VARCHAR(320),
+    IN p_priority INT,
+    IN p_phone_name VARCHAR(64),
+    IN p_postcode VARCHAR(32),
+    IN p_county VARCHAR(255),
+    IN p_country VARCHAR(50),
+    IN p_first_line VARCHAR(100),
+    IN p_second_line VARCHAR(100) DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    pv_id INT;
+    pv_addr_id INT;
+    pv_phone_id INT;
+BEGIN
+
+    INSERT INTO vet(name) VALUES (p_name) RETURNING id INTO pv_id;
+
+    INSERT INTO address(first_line, second_line, postcode, county, country) VALUES
+        (p_first_line, p_second_line, p_postcode, p_county, p_country) RETURNING id INTO pv_addr_id;
+
+    INSERT INTO phone(country_code, number, instructions, priority, name) VALUES
+        (p_country_code, p_number, p_instructions, p_priority, p_phone_name) RETURNING id INTO pv_phone_id;
+
+    INSERT INTO addresses(personnel_id, address_id, type) VALUES(pv_id, pv_addr_id, 'VET'::personnel_type);
+
+    INSERT INTO phone_numbers(personnel_id, phone_id, type) VALUES(pv_id, pv_addr_id, 'VET'::personnel_type);
+
+END
+$$;
+
+DROP PROCEDURE IF EXISTS add_staff;
+CREATE PROCEDURE add_staff(
+    IN p_first_name VARCHAR(32),
+    IN p_last_name VARCHAR(32),
+    IN p_dob DATE,
+    IN p_salary INT,
+    IN p_role_id INT,
+
+    IN p_country_code VARCHAR(5),
+    IN p_number VARCHAR(15),
+    IN p_instructions VARCHAR(320),
+    IN p_priority INT,
+    IN p_phone_name VARCHAR(64),
+
+    IN p_postcode VARCHAR(32),
+    IN p_county VARCHAR(255),
+    IN p_country VARCHAR(50),
+    IN p_first_line VARCHAR(100),
+    IN p_second_line VARCHAR(100) DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    pv_id INT;
+    pv_addr_id INT;
+    pv_phone_id INT;
+BEGIN
+
+    INSERT INTO staff(first_name, last_name, dob, salary, role_id)
+        VALUES (p_first_name, p_last_name, p_dob, p_salary, p_role_id)
+            RETURNING id INTO pv_id;
+
+    INSERT INTO address(first_line, second_line, postcode, county, country) VALUES
+        (p_first_line, p_second_line, p_postcode, p_county, p_country) RETURNING id INTO pv_addr_id;
+
+    INSERT INTO phone(country_code, number, instructions, priority, name) VALUES
+        (p_country_code, p_number, p_instructions, p_priority, p_phone_name) RETURNING id INTO pv_phone_id;
+
+    INSERT INTO addresses(personnel_id, address_id, type) VALUES(pv_id, pv_addr_id, 'STAFF'::personnel_type);
+
+    INSERT INTO phone_numbers(personnel_id, phone_id, type) VALUES(pv_id, pv_phone_id, 'STAFF'::personnel_type);
+
+END
+$$;
+
 DROP PROCEDURE IF EXISTS add_owner_address;
 CREATE PROCEDURE add_owner_address(
     IN p_owner_id INT,
@@ -232,6 +328,7 @@ BEGIN
 
     INSERT INTO addresses(personnel_id, address_id, type) values (p_owner_id, pv_id, 'OWNER'::personnel_type);
 
+
 END
 $$;
 
@@ -240,7 +337,8 @@ CREATE PROCEDURE add_owner_dog(
     IN p_owner_id INT,
     IN p_name VARCHAR(255),
     IN p_dob DATE,
-    IN p_breed VARCHAR(32)
+    IN p_breed VARCHAR(32),
+    IN p_microchip_id VARCHAR(15)
 )
 LANGUAGE plpgsql
 AS
@@ -249,8 +347,8 @@ DECLARE
     pv_id INT;
 BEGIN
 
-    INSERT INTO dog(name, dob, breed) VALUES
-        (p_name, p_dob, p_breed) RETURNING id INTO pv_id;
+    INSERT INTO dog(name, dob, breed, microchip_id) VALUES
+        (p_name, p_dob, p_breed, p_microchip_id) RETURNING id INTO pv_id;
 
     INSERT INTO dog_owners(dog_id, owner_id) VALUES(pv_id, p_owner_id);
 
@@ -334,11 +432,21 @@ BEGIN
             IF( NOT EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No staff.id found';
             END IF;
+
+        WHEN 'VET'::personnel_type THEN
+            IF( NOT EXISTS(SELECT id FROM vet WHERE id = NEW.personnel_id) ) THEN
+                RAISE EXCEPTION 'No vet.id found';
+            END IF;
+
+            IF( EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
+                RAISE EXCEPTION  'Vet address already registered';
+            END IF;
     END CASE;
 
     IF (EXISTS(SELECT address_id FROM addresses WHERE personnel_id = NEW.personnel_id AND type = NEW.type AND address_id = NEW.address_id)) THEN
         RAISE EXCEPTION 'Duplicate address for owner.id found.';
     END IF;
+
     RETURN NEW;
 
 END
@@ -365,10 +473,18 @@ BEGIN
 
         WHEN 'STAFF'::personnel_type THEN
 
-            IF( EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
+            IF( NOT EXISTS(SELECT id FROM staff WHERE id = NEW.personnel_id) ) THEN
                 RAISE EXCEPTION 'No staff.id found';
             END IF;
 
+        WHEN 'VET'::personnel_type THEN
+            IF( NOT EXISTS(SELECT id FROM vet WHERE id = NEW.personnel_id) ) THEN
+                RAISE EXCEPTION 'No vet.id found';
+            END IF;
+
+            IF( EXISTS(SELECT phone_id FROM phone_numbers WHERE personnel_id = NEW.personnel_id AND type = NEW.type)) THEN
+                RAISE EXCEPTION  'Vet phone already registered';
+            END IF;
     END CASE;
 
     IF (EXISTS(SELECT phone_id FROM phone_numbers WHERE personnel_id = NEW.personnel_id AND type = NEW.type AND phone_id = NEW.phone_id)) THEN
@@ -401,7 +517,7 @@ BEGIN
         FROM phone_numbers
         INNER JOIN phone
             ON phone_numbers.phone_id = phone.id
-    WHERE phone.priority = priority AND phone_numbers.personnel_id = NEW.personnel_id;
+    WHERE phone.priority = priority AND phone_numbers.personnel_id = NEW.personnel_id AND phone_numbers.type = NEW.type;
 
     IF(pv_priority_count > 0) THEN
         RAISE EXCEPTION 'Duplicate phone number priorities.';
@@ -464,21 +580,20 @@ BEGIN;
     CALL add_owner_address(13, 'L8 6EG', 'Somerset', 'Malawi', '0 Robson trafficway');
     CALL add_owner_address(14, 'S05 9EF', 'Cardiganshire', 'Armenia', 'Flat 3 Cunningham stream');
 
-    CALL add_owner_dog(1, 'Julian', '27/05/1976', 'Pug');
-    CALL add_owner_dog(1, 'John', '08/04/2003', 'Pug');
-    CALL add_owner_dog(2, 'Lorraine', '23/01/2021', 'German pinscher');
-    CALL add_owner_dog(3, 'Dean', '01/07/1989', 'German pinscher');
-    CALL add_owner_dog(4, 'Holly', '11/10/1996', 'German pinscher');
-    CALL add_owner_dog(5, 'Susan', '10/04/2002', 'Bulldog');
-    CALL add_owner_dog(6, 'Nicholas', '06/04/2013', 'German pinscher');
-    CALL add_owner_dog(7, 'Leon', '24/01/1979', 'Neapolitan Mastiff');
-    CALL add_owner_dog(8, 'Mitchell', '29/03/2016', 'American Bully');
-    CALL add_owner_dog(9, 'Jenna', '12/07/2016', 'Pug');
-    CALL add_owner_dog(10, 'Danny', '27/08/1984', 'English springer spaniel');
-    CALL add_owner_dog(11, 'Raymond', '21/04/1971', 'English springer spaniel');
-    CALL add_owner_dog(12, 'Lee', '14/10/1972', 'Chow chow');
-    CALL add_owner_dog(13, 'Pauline', '04/02/1976', 'German pinscher');
-    CALL add_owner_dog(14, 'Jake', '08/04/1993', 'Pug');
+    CALL add_owner_dog(1, 'Kelly', '12/01/1973', 'English springer spaniel','983897165550561');
+    CALL add_owner_dog(2, 'Ashley', '21/06/2004', 'Chow chow','990314292197188');
+    CALL add_owner_dog(3, 'Denise', '16/06/1994', 'Pug','982913308187381');
+    CALL add_owner_dog(4, 'Abdul', '07/09/2017', 'American Bully','980889586918508');
+    CALL add_owner_dog(5, 'Rhys', '28/11/2009', 'American Bully','987521959369711');
+    CALL add_owner_dog(6, 'Mary', '27/02/1977', 'American Bully','994390641508164');
+    CALL add_owner_dog(7, 'Daniel', '03/12/1985', 'English springer spaniel','996180318735457');
+    CALL add_owner_dog(8, 'Raymond', '15/11/1979', 'English springer spaniel','990638265795038');
+    CALL add_owner_dog(9, 'Colin', '27/11/2011', 'Neapolitan Mastiff','993599753657799');
+    CALL add_owner_dog(10, 'Jay', '02/04/2006', 'Yorkshire Terrier','981083763016809');
+    CALL add_owner_dog(11, 'Tom', '22/11/1988', 'Yorkshire Terrier','982440007793428');
+    CALL add_owner_dog(12, 'Janice', '01/10/1975', 'Neapolitan Mastiff','984084608404472');
+    CALL add_owner_dog(13, 'Leslie', '12/05/2008', 'Pug','991200731122943');
+    CALL add_owner_dog(14, 'Frederick', '17/04/2016', 'Neapolitan Mastiff','978316158625649');
 
     CALL add_owner_phone_number(1, '+423', '328547982', 'Dolorem enim quod repellendus fugiat eius laborum.', 1, 'Andrea');
     CALL add_owner_phone_number(2, '+961', '322844141', 'Quidem labore at dicta nobis cupiditate vel minus rerum repellendus veritatis voluptate.', 1, 'Alice');
@@ -646,5 +761,43 @@ BEGIN;
     INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (3, 1, 98,4, 'Lorem ipsum');
     INSERT INTO kennel(floor_id, building_id, room_id, capacity, requirements) VALUES (1, 2, 99,2, 'Lorem ipsum');
 
+    CALL add_vet('Patel Group', '967', '188738920', 'Illum ipsa nihil magni incidunt animi dolorum illo consequuntur.', 1, 'business', 'ZE1 9BA', 'Suffolk', 'Honduras', '90 Connor land');
+    CALL add_vet('Watson, Smart and Gray', '228', '384672008', 'Reprehenderit quibusdam nihil explicabo dolores dolore autem in cupiditate pariatur beatae minima.', 1, 'business', 'S21 3XJ', 'West Sussex', 'Netherlands', 'Flat 48 Nicola knolls');
+    CALL add_vet('Perry PLC', '221', '725459669', 'Velit eius accusamus repellendus aut fuga quibusdam laudantium incidunt ex repudiandae.', 1, 'business', 'G2 3HJ', 'East Lothian', 'Monaco', 'Studio 81 Nixon common');
+    CALL add_vet('Johnson-Evans', '883', '579273295', 'Quis deserunt fuga et nesciunt similique nam numquam.', 1, 'business', 'N40 8UD', 'Buckinghamshire', 'Albania', 'Flat 82 Ford row');
+    CALL add_vet('Green Ltd', '354', '64337978', 'Cumque quis minus nostrum culpa rem minus aliquam sed deserunt nemo quis beatae.', 1, 'business', 'B3 5LX', 'Orkney Islands', 'Estonia', 'Flat 96Y Barry passage');
+    CALL add_vet('Butcher LLC', '590', '695736978', 'Voluptatum commodi cum eligendi blanditiis ex.', 1, 'business', 'GU27 3NX', 'East Lothian', 'Gambia', 'Studio 93o Ryan station');
+    CALL add_vet('Evans LLC', '878', '51082119', 'Quia earum nulla minus libero harum.', 1, 'business', 'M88 7TL', 'Surrey', 'United States Minor Outlying Islands', 'Studio 6 Johnston lake');
+    CALL add_vet('Davis, Barker and Henderson', '81', '252812661', 'Officia animi occaecati quidem omnis dolorum maiores consequatur mollitia.', 1, 'business', 'G8 7EP', 'Essex', 'Indonesia', '25 Smith route');
+    CALL add_vet('Owens-Hill', '1', '370561825', 'Quo corporis possimus cum cum magnam consequuntur.', 1, 'business', 'S6D 1JU', 'Durham', 'Bangladesh', 'Flat 0 Smith field');
+    CALL add_vet('Macdonald Group', '356', '29025255', 'Sint impedit adipisci aperiam magni iure eligendi.', 1, 'business', 'DE98 5XJ', 'North Lanarkshire', 'Saudi Arabia', 'Flat 11F Moore inlet');
+    CALL add_vet('Smith Group', '373', '906017189', 'Tempore delectus voluptatum reiciendis eveniet deleniti praesentium cumque adipisci nihil incidunt.', 1, 'business', 'M52 1DJ', 'Aberdeenshire', 'Algeria', 'Studio 5 Carey club');
+    CALL add_vet('Richardson LLC', '63', '369169511', 'Ullam vero odit quasi blanditiis placeat quam facilis.', 1, 'business', 'MK29 9HB', 'Wiltshire', 'Martinique', '461 Charles field');
+    CALL add_vet('Davies-Turner', '599', '625732923', 'Aliquam minima atque officiis cum nostrum occaecati in provident.', 1, 'business', 'G87 3AR', 'Pembrokeshire', 'Iraq', 'Studio 58y Perry junctions');
+    CALL add_vet('Cameron-Slater', '961', '362471424', 'Quisquam accusantium atque quasi quos eos quam accusamus.', 1, 'business', 'HX9E 9YD', 'City of Edinburgh', 'Venezuela', 'Studio 82f Dominic crescent');
+
+    INSERT INTO staff_roles(role_name) VALUES ('General Staff');
+    INSERT INTO staff_roles(role_name) VALUES ('Manager');
+
+    CALL add_staff('Roger','Knight', '10/03/1988', 22105, 2, '881 7', '94101991', 'Nisi excepturi inventore eos excepturi accusamus quo quam tenetur voluptates labore in excepturi.', 1, 'business', 'HX4P 5BB', 'Derry and Londonderry', 'Chad', '44 Alexandra lane');
+    CALL add_staff('Elizabeth','Wall', '17/04/1983', 34463, 2, '1 340', '596970579', 'Aliquam suscipit non minima molestiae dolorem quasi fugiat culpa possimus omnis.', 1, 'business', 'B9J 4JH', 'Armagh', 'Moldova', 'Studio 45r Leonard forge');
+    CALL add_staff('Diane','Parker', '19/12/1986', 22661, 1, '290', '802292512', 'Itaque a exercitationem eaque vel assumenda iure tempore.', 1, 'business', 'CV2H 3TL', 'Nottinghamshire', 'Qatar', 'Studio 71 Michelle circle');
+    CALL add_staff('Valerie','Lowe', '06/04/1988', 32050, 2, '881 9', '272304699', 'Maxime provident consequatur ut iusto suscipit id nemo dicta optio commodi odio odit.', 1, 'business', 'B22 1JA', 'Surrey', 'Korea', 'Studio 7 Lloyd ranch');
+    CALL add_staff('Lynne','Harrison', '14/09/1997', 13388, 1, '1 246', '945365568', 'Facere ducimus sapiente totam ullam quisquam corrupti temporibus ipsa soluta dolore officia a.', 1, 'business', 'HS94 6DT', 'Perth and Kinross', 'Japan', '996 Jeffrey estates');
+    CALL add_staff('Nigel','Wood', '09/09/2005', 24586, 1, '43', '821966407', 'Ipsum dicta excepturi sed id officia.', 1, 'business', 'E84 1TG', 'Anglesey', 'Turkmenistan', '416 Patrick common');
+    CALL add_staff('Alex','Bell', '08/05/2009', 26677, 1, '53', '519552816', 'Odio animi perspiciatis ipsum doloribus fugit magnam ea totam assumenda dolores nemo error.', 1, 'business', 'L7 8QZ', 'Clackmannanshire', 'Svalbard & Jan Mayen Islands', '933 Mandy squares');
+    CALL add_staff('Carole','Smith', '13/06/1974', 24596, 1, '976', '930550989', 'Vero praesentium sequi commodi nesciunt quam perspiciatis culpa aspernatur repudiandae.', 1, 'business', 'S9 2BY', 'Anglesey', 'South Africa', '00 Gerald mission');
+    CALL add_staff('Pamela','Kelly', '10/04/2012', 19396, 1, '231', '325930295', 'Assumenda eligendi non optio quidem aliquam praesentium possimus quae ab quis ipsa itaque doloribus.', 1, 'business', 'NP6A 9DH', 'Cumbria', 'Mozambique', 'Studio 16O Leon path');
+    CALL add_staff('Lewis','Hamilton', '10/02/2004', 26317, 1, '590', '613993867', 'Est perspiciatis architecto reprehenderit nam modi earum.', 1, 'business', 'RH9 5TG', 'West Yorkshire', 'Gibraltar', '6 Rowley branch');
+    CALL add_staff('Laura','Pickering', '12/09/2008', 25112, 1, '55', '702530331', 'Voluptas ullam laboriosam expedita pariatur illum tenetur atque dicta harum aperiam.', 1, 'business', 'BL0P 9JL', 'Orkney Islands', 'Libyan Arab Jamahiriya', '52 Marian ramp');
+    CALL add_staff('Kate','Mills', '15/10/1997', 19025, 2, '688', '838781154', 'Maiores porro necessitatibus molestiae quos provident quos praesentium ipsa sint ab.', 1, 'business', 'HS8R 0NJ', 'Midlothian', 'Tonga', 'Flat 0 Bruce mill');
+    CALL add_staff('Hazel','Marshall', '08/06/1985', 22025, 2, '870', '773930421', 'Quo eos ullam laboriosam ipsum ducimus ex.', 1, 'business', 'G2 2GA', 'Antrim', 'Israel', 'Studio 61 Carr street');
+    CALL add_staff('Glenn','Robinson', '14/02/2018', 32510, 1, '855', '930996820', 'Blanditiis amet ipsam nemo est iure accusantium nemo atque molestias sapiente mollitia molestias architecto.', 1, 'business', 'G3 5XF', 'Greater Manchester', 'Italy', 'Studio 59 Ann dam');
+
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (1, 'January 8 09:00:00 1999 PST', 'January 8 17:00:00 2022 PST',0 );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (2, 'January 10 09:00:00 1999 PST', 'January 12 10:00:00 2022 PST',0 );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (3, 'January 11 09:00:00 1999 PST', 'January 12 11:00:00 2022 PST',0 );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (4, 'January 12 09:00:00 1999 PST', 'January 12 17:00:00 2022 PST',0 );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (5, 'January 12 09:00:00 1999 PST', 'January 12 17:00:00 2022 PST',0 );
 
 COMMIT;
