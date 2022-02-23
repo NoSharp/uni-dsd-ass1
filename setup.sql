@@ -455,7 +455,6 @@ END
 $$
 LANGUAGE plpgsql;
 
-
 DROP FUNCTION IF EXISTS enforce_poly_fk_phone_numbers CASCADE ;
 
 CREATE FUNCTION enforce_poly_fk_phone_numbers()
@@ -532,21 +531,19 @@ $$
 LANGUAGE plpgsql;
 
 CREATE TRIGGER enforce_priority_phone_numbers_trigger
-    BEFORE insert
+    BEFORE INSERT
     ON phone_numbers
     FOR EACH ROW EXECUTE PROCEDURE enforce_priority_phone_numbers();
 
-
 CREATE TRIGGER enforce_poly_fk_phone_numbers_trigger
-    BEFORE insert
+    BEFORE INSERT
     ON phone_numbers
     FOR EACH ROW EXECUTE PROCEDURE enforce_poly_fk_phone_numbers();
 
 CREATE TRIGGER enforce_poly_fk_addresses_trigger
-    BEFORE insert
+    BEFORE INSERT
     ON addresses
     FOR EACH ROW EXECUTE PROCEDURE enforce_poly_fk_addresses();
-
 
 BEGIN;
 
@@ -652,6 +649,7 @@ BEGIN;
     INSERT INTO treatments(treatment_id, dog_id) VALUES (14,14);
 
     CALL add_food_requirement(1, 'Colgate', 50, 'Lorem Ipsum', 60);
+    CALL add_food_requirement(1, 'Colgate2', 120, 'Lorem Ipsum', 60);
     CALL add_food_requirement(2, 'Colgate', 50, 'Lorem Ipsum', 60);
     CALL add_food_requirement(3, 'Colgate', 50, 'Lorem Ipsum', 60);
     CALL add_food_requirement(4, 'Colgate', 50, 'Lorem Ipsum', 60);
@@ -799,24 +797,27 @@ BEGIN;
     CALL add_staff('Glenn','Robinson', '14/02/2018', 32510, 1, '855', '930996820', 'Blanditiis amet ipsam nemo est iure accusantium nemo atque molestias sapiente mollitia molestias architecto.', 1, 'business', 'G3 5XF', 'Greater Manchester', 'Italy', 'Studio 59 Ann dam');
 
     INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (1, 'January 8 09:00:00 2022 BST', 'January 8 17:00:00 2022 BST',0::bit );
-    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (2, 'January 10 09:00:00 2022 BST', 'January 12 10:00:00 2022 BST',0::bit );
+    INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (2, 'February 12 09:00:00 2022 BST', 'February 12 10:00:00 2022 BST',0::bit );
     INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (3, 'January 11 09:00:00 2022 BST', 'January 12 11:00:00 2022 BST',0::bit );
     INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (4, 'January 12 09:00:00 2022 BST', 'January 12 17:00:00 2022 BST',0::bit );
     INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (5, 'January 12 09:00:00 2022 BST', 'January 12 17:00:00 2022 BST',0::bit );
 
+    UPDATE dog SET kennel_id = 1 WHERE id = 1;
     INSERT INTO booking(dog_id, start, expiration) VALUES (1, 'January 12 09:00:00 2022 BST', 'January 28 09:00:00 2022 BST');
     INSERT INTO booking(dog_id, start, expiration) VALUES (2, 'January 12 09:00:00 2022 BST', 'January 31 09:00:00 2022 BST');
     INSERT INTO booking(dog_id, start, expiration) VALUES (3, 'January 12 09:00:00 2022 BST', 'January 28 17:00:00 2022 BST');
     INSERT INTO booking(dog_id, start, expiration) VALUES (4, 'February 12 09:00:00 2022 BST', 'February 28 17:00:00 2022 BST');
 
+
 COMMIT;
-   INSERT INTO shift(staff_id, start_time, end_time, complete) VALUES (5, 'February 12 09:00:00 2022 BST', 'February 12 17:00:00 2022 BST',0::bit );
+
 
 
 -- INSERT INTO addresses(personnel_id, address_id, type) VALUES(1,1, 'VET'::personnel_type);
 
 
 -- Get all of today's bookings.
+-- Query #1
 SELECT booking.id as booking_id,
        dog.id AS dog_id,
        dog.name as dog_name,
@@ -826,23 +827,24 @@ SELECT booking.id as booking_id,
        booking.start as start
 FROM
     booking
-    INNER JOIN dog
-        ON dog.id = booking.dog_id
-    INNER JOIN dog_owners
-        ON dog.id = dog_owners.dog_id
-    INNER JOIN owner
-        ON dog_owners.owner_id = owner.id
-    WHERE
-          booking.start >= 'February 12 00:00:00 2022 BST'::timestamptz
-        AND booking.start < ('February 12 00:00:00 2022 BST'::timestamptz + interval '24 hours');
+INNER JOIN dog
+    ON dog.id = booking.dog_id
+INNER JOIN dog_owners
+    ON dog.id = dog_owners.dog_id
+INNER JOIN owner
+    ON dog_owners.owner_id = owner.id
+WHERE
+      booking.start >= 'February 12 00:00:00 2022 BST'::timestamptz
+    AND booking.start < ('February 12 00:00:00 2022 BST'::timestamptz + interval '24 hours');
 
---  get dogs with flea treatments that have expired
+-- Get dogs with flea treatments that have expired that are in our care
+-- Query #2
 SELECT
     dog.id as dog_id,
     dog.kennel_id as kennel_id,
     dog.name as dog_name,
+    CONCAT('Building:', kennel.building_id, ' Floor:', kennel.floor_id, ' Room:', kennel.room_id) as kennel,
     CONCAT(owner.first_name, ' ', owner.last_name) as owner_name,
-    -- "You will be marked on the complexity of each query, as well as the usefulness of the output", ok.
     STRING_AGG(
         (
             SELECT CONCAT(phone.country_code, phone.number, '(', phone.instructions, ')')
@@ -864,14 +866,19 @@ INNER JOIN treatment
     ON treatments.treatment_id = treatment.id
 INNER JOIN treatment_type
     ON treatment.type = treatment_type.id
+INNER JOIN kennel
+    ON kennel.id = dog.kennel_id
 WHERE
     treatment.type = (SELECT id FROM treatment_type WHERE treatment_type.name = 'flea treatment')
 AND
     treatment.valid_until < '12/2/2022'::date
+AND
+    dog.kennel_id IS NOT NULL
 GROUP BY
-    dog.id, owner.id;
+    dog.id, owner.id, kennel.id;
 
 -- Get staff who have a shift today, and their times.
+-- Query #3
 SELECT
     CONCAT(staff.first_name, ' ', staff.last_name) as staff_name,
     CONCAT(TO_CHAR(DATE_PART('HOUR',start_time),'fm00'), ':', TO_CHAR(DATE_PART('MINUTE', start_time), 'fm00')) as start_time,
@@ -882,7 +889,7 @@ FROM
 INNER JOIN staff
     ON shift.staff_id = staff.id
 INNER JOIN staff_roles
-    on staff.role_id = staff_roles.id
+    ON staff.role_id = staff_roles.id
 WHERE
     shift.start_time >= 'February 12 00:00:00 2022 BST'::timestamptz
 AND
@@ -890,7 +897,39 @@ AND
 AND
     shift.complete::int = 0;
 
--- Get the next feed times (do tomorrow)
+-- Get the next feed times
+-- Query #4
+WITH
+     cur_time AS (VALUES('February 12 07:49:00 2022 BST'::timestamptz)),
+     wake_up_time AS (VALUES('February 12 07:00:00 2022 BST'::timestamptz)),
+     hour_of_wake_up_time AS (VALUES(DATE_PART('HOUR', (table wake_up_time) ))),
+     minutes_of_wake_up_time AS (VALUES(DATE_PART('MINUTE',  (table wake_up_time))))
+SELECT
+    dog.kennel_id AS kennel_id,
+    dog.name AS dog_name,
+    dog.breed AS dog_breed,
+    dog.id AS dog_id,
+    CONCAT('Building:', kennel.building_id, ' Floor:', kennel.floor_id, ' Room:', kennel.room_id) as kennel,
+    CONCAT(food_requirement.size, 'g of ', food_requirement.food_name, '(', food_requirement.instructions, ')') AS food,
+    CONCAT(
+        TO_CHAR( FLOOR(((TABLE hour_of_wake_up_time) * 60 + (TABLE minutes_of_wake_up_time) + food_requirement.mins_since_start) / 60)+1, 'fm00'),
+        ':' ,
+        TO_CHAR( MOD(((TABLE hour_of_wake_up_time) * 60 + (TABLE minutes_of_wake_up_time) + food_requirement.mins_since_start)::int, 60), 'fm00')
+    ) AS time_of_day
+FROM
+    dog
+INNER JOIN kennel
+    ON kennel.id = dog.kennel_id
+INNER JOIN food_requirements
+    ON food_requirements.dog_id = dog.id
+INNER JOIN food_requirement
+    ON food_requirement.id = food_requirements.food_requirement_id
+WHERE
+    ( (TABLE wake_up_time) + CONCAT(food_requirement.mins_since_start::varchar(10), ' minutes')::interval ) > (TABLE cur_time)
+AND
+    dog.kennel_id IS NOT NULL
+GROUP BY
+    dog.id, food_requirements.dog_id, food_requirements.food_requirement_id, food_requirement.id, kennel.id;
 
 -- SELECT * FROM booking  WHERE booking.start ?z 'February 12 00:00:00 2022 BST'::timestamptz;
 --         AND booking.start < ('February 12 00:00:00 2022 BST'::timestamptz + interval '25 hours');
